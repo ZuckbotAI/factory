@@ -219,6 +219,30 @@ def test_plugin_file_without_plugin_value_raises(tmp_path: Path) -> None:
         resolve_plugin("foo", (builtin,))
 
 
+def test_absolute_plugin_name_is_rejected(tmp_path: Path) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    _write_named_plugin(outside, "payload")
+    builtin = tmp_path / "builtin"
+    builtin.mkdir()
+    with pytest.raises(InvalidPluginError, match="single relative path segment"):
+        resolve_plugin(str(outside / "payload"), (builtin,))
+
+
+def test_parent_traversal_plugin_name_is_rejected(tmp_path: Path) -> None:
+    builtin = tmp_path / "builtin"
+    builtin.mkdir()
+    with pytest.raises(InvalidPluginError, match="single relative path segment"):
+        resolve_plugin("../evil", (builtin,))
+
+
+def test_subdirectory_plugin_name_is_rejected(tmp_path: Path) -> None:
+    builtin = tmp_path / "builtin"
+    builtin.mkdir()
+    with pytest.raises(InvalidPluginError, match="single relative path segment"):
+        resolve_plugin("sub/evil", (builtin,))
+
+
 def test_disabled_plugins_are_never_imported(tmp_path: Path) -> None:
     builtin = tmp_path / "builtin"
     builtin.mkdir()
