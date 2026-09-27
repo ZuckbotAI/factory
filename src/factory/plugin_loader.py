@@ -92,14 +92,31 @@ class AmbiguousPluginError(PluginError):
     """Raised when several search paths contain the requested plugin."""
 
 
+def _validate_plugin_name(name: str) -> None:
+    """Reject plugin names that could escape the search directories.
+
+    A name must be a single relative path segment: joining a search path
+    with an absolute name would discard the search path, and a name
+    containing separators or ``..`` could point outside the configured
+    directories. The ``.py`` suffix is appended after this check, so the
+    name itself carries the whole constraint.
+    """
+    if not name or Path(name).name != name:
+        raise InvalidPluginError(
+            f'plugin name "{name}" must be a single relative path segment'
+        )
+
+
 def resolve_plugin(name: str, search_paths: tuple[Path, ...]) -> Plugin:
     """Resolve one enabled plugin by name.
 
     Looks for ``<search-path>/<name>.py`` in each search path (no
     recursion) and loads only the single matching file. Zero matches
     raise PluginNotFoundError; more than one match raises
-    AmbiguousPluginError instead of silently picking a winner.
+    AmbiguousPluginError instead of silently picking a winner. Names
+    that are not single relative path segments raise InvalidPluginError.
     """
+    _validate_plugin_name(name)
     candidates = (path / f"{name}.py" for path in search_paths)
     matches = [path for path in candidates if path.is_file()]
     if not matches:
